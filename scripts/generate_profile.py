@@ -481,9 +481,13 @@ def get_xls_and_version_from_zip(path):
     archive = zipfile.ZipFile(path, 'r')
     profile_version = None
 
+    # archive.open requires the full path, e.g. 'FitSDKRelease_20.66.00/c/fit.h'
+    # Grabbing the name of the first file seems to work.
+    base_name = archive.filelist[0].filename
+    c_fit_name = base_name + "c/fit.h"
     version_match = re.search(
         r'Profile Version.+?(\d+\.?\d*).*',
-        archive.open('c/fit.h').read().decode(),
+        archive.open(c_fit_name).read().decode(),
     )
     if version_match:
         profile_version = ("%f" % float(version_match.group(1))).rstrip('0').ljust(4, '0')
@@ -491,7 +495,8 @@ def get_xls_and_version_from_zip(path):
     try:
         return archive.open('Profile.xls'), profile_version
     except KeyError:
-        return archive.open('Profile.xlsx'), profile_version
+        xlsx_fname = base_name + 'Profile.xlsx'
+        return archive.open(xlsx_fname), profile_version
 
 
 def main(input_xls_or_zip, output_py_path=None):
@@ -530,9 +535,9 @@ def main(input_xls_or_zip, output_py_path=None):
 
     if output_py_path:
         open(output_py_path, 'w').write(output)
-        print("Profile%s written to %s",
-            ' version %s' % profile_version if profile_version else '',
-            output_py_path
+        print("Profile%s written to %s" %
+            (' version %s' % profile_version if profile_version else '',
+            output_py_path)
         )
     else:
         print(output.strip())
@@ -540,7 +545,7 @@ def main(input_xls_or_zip, output_py_path=None):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: %s <FitSDK.zip | Profile.xls> [profile.py]", os.path.basename(__file__))
+        print("Usage: %s <FitSDK.zip | Profile.xls> [profile.py]" % os.path.basename(__file__))
         sys.exit(0)
 
     xls = sys.argv[1]
